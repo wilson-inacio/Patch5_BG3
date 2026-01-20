@@ -1,0 +1,16 @@
+---
+title: "Did Patch 5 Causally Increase Player Engagement in Baldur's Gate 3?"
+author: "Wilson Inacio"
+date: "2026-01-20"
+output: html_document
+---
+
+# Scope
+## Project Goals
+Baldur's Gate 3 is a RPG game that was released for PCs on the 3rd of August 2023, and saw unprecedent acclaim. The game had a massive expansion on it's fifth patch, released November 30th, which included:
+ - A new epilogue giving closure to some characters
+ - Honour mode, a new difficulty mode with stricter rules and a single save file
+ - Custom mode, allowing players to customize various gameplay settings
+ - Performance improvements, particularly in Act 3
+ - Quality of life inprovements throughout
+With this project, rather than studying the lunch effects of the game, I'll estimate the causal effects of the post-launch content update of Patch 5 on engagement using a Difference-in-Differences framework.
