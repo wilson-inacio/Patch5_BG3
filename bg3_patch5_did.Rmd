@@ -7,7 +7,7 @@ output: html_document
 
 # Scope
 ## Project Goals
-`Baldur's Gate 3` is a RPG game that was released for PCs on the 3rd of August 2023, and saw unprecedented acclaim. The game had a massive expansion on it's fifth patch, released November 30th, which included:<br>
+`Baldur's Gate 3` is an RPG game that was released for PCs on the 3rd of August 2023 and saw unprecedented acclaim. The game had a massive expansion on it's fifth patch, released November 30th, which included:<br>
  - A new epilogue giving closure to some characters<br>
  - Honour mode, a new difficulty mode with stricter rules and a single save file<br>
  - Custom mode, allowing players to customize various gameplay settings<br>
@@ -19,8 +19,8 @@ With this project, rather than studying the launch effects of the game, I'll est
 Daily player engagement data were obtained from Steam Charts, a public aggregation of Steam usage statistics. For each game, daily average player counts were extracted and aggregated into weekly averages for analysis.
 
 ## Analysis
-This project will estimate the impact of `Baldur's Gate 3` Patch 5 on player engagement on Steam. Patch 5 was specifically chosen for our treatment as it is a major update to the game, far enough from the launch date so that the initial launch spike had already decayed and the player counts had reached a stable trajectory.<br>
-With this in mind, engagement might still be affected by word of mouth growth and the award season buzz.
+This project will estimate the impact of `Baldur's Gate 3` Patch 5 on player engagement on Steam. Patch 5 was specifically chosen for our treatment, as it is a major update to the game, far enough from the launch date so that the initial launch spike had already decayed and the player counts had reached a stable trajectory.<br>
+With this in mind, engagement might still be affected by word-of-mouth growth and the award season buzz.
 
 **Hypothesis**: Patch 5 had **no effect** on average player engagement for `Baldur’s Gate 3` relative to the control game.<br>
 **NULL Hypothesis**: Patch 5 had a causal effect on average player engagement for Baldur’s Gate 3 relative to the control game.<br>
@@ -182,6 +182,6 @@ Results should be interpreted with caution given the coarse time aggregation and
 
 ## Conclusion and Next Steps
 Overall, the analysis suggests that Patch 5 was associated with an increase in player engagement for `Baldur’s Gate 3` relative to the control title, `Hogwarts Legacy`. While the graphical evidence shows a clear divergence in trends following the patch release, the results should be interpreted with caution. The post-treatment period coincides with external events, such as major award announcements, which may have contributed to higher player counts alongside the patch itself. As a result, although the findings are consistent with a positive treatment effect, part of the observed increase may reflect broader visibility and publicity rather than the patch alone.<br>
-Going forward, it would be interesting to redo this project which access to higher-frequency data, as the data collected only allowed for a monthly analysis, having a weekly analysis might yield different results.<br>
+Going forward, it would be interesting to redo this project with access to higher-frequency data, as the data collected only allowed for a monthly analysis, having a weekly analysis might yield different results.<br>
 Expanding the control group would also allow for a different analysis, especially with similar games as the intended `Divinity: Original Sin 2` and `Disco Elysium`, unfortunately data for these two games wasn't available for the period that this project was interested in analysing.<br>
-An extension of this project could also be examining engagement effects on a longer time period.
+An extension of this project could also be examining engagement effects over a longer time period.
