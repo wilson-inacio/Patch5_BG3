@@ -13,7 +13,7 @@ output: html_document
  - Custom mode, allowing players to customize various gameplay settings<br>
  - Performance improvements, particularly in Act 3<br>
  - Quality of life improvements throughout<br>
-With this project, rather than studying the lunch effects of the game, I'll estimate the causal effects of the post-launch content update of Patch 5 on engagement using a Difference-in-Differences framework.
+With this project, rather than studying the launch effects of the game, I'll estimate the causal effects of the post-launch content update of Patch 5 on engagement using a Difference-in-Differences framework.
 
 ## Data
 Daily player engagement data were obtained from Steam Charts, a public aggregation of Steam usage statistics. For each game, daily average player counts were extracted and aggregated into weekly averages for analysis.
@@ -22,15 +22,22 @@ Daily player engagement data were obtained from Steam Charts, a public aggregati
 This project will estimate the impact of `Baldur's Gate 3` Patch 5 on player engagement on Steam. Patch 5 was specifically chosen for our treatment as it is a major update to the game, far enough from the launch date so that the initial launch spike had already decayed and the player counts had reached a stable trajectory.<br>
 With this in mind, engagement might still be affected by word of mouth growth and the award season buzz.
 
-The estimated treatment effect may partially capture increased visibility from awards that coincided with the post-treatment period, notably the *Golden Joysticks Awards* on November 11, 2023, and *The Game Awards* on December 7, 2023.
+**Hypothesis**: Patch 5 had **no effect** on average player engagement for `Baldur’s Gate 3` relative to the control game.<br>
+**NULL Hypothesis**: Patch 5 had a causal effect on average player engagement for Baldur’s Gate 3 relative to the control game.<br>
+**Alpha**: All statistical inference is conducted using conventional significance thresholds (α = 0.05), though results are interpreted cautiously given data limitations.<br>
 
-Two control groups will be used: Player engagement of `Divinity: Original Sin 2` and player engagement of `Disco Elysium`.<br>
-This games were chosen as they are similar in gameplay and content to `Baldur's Gate 3` but didn't had any new content, patches or DLCs released around the time of our treatment date.<br>
-There were also no Steam sales that could have influenced the player count of any of the games, as the only Steam sales that occored around the treatment date were winter sales affecting all games.<br>
+The estimated treatment effect may partially capture increased visibility from awards that coincided with the post-treatment period, notably the *Golden Joysticks Awards* on November 11, 2023, and *The Game Awards* on December 7, 2023, and these awards can be classified as confounders.
+
+Initially two control groups were going to be used: Player engagement of `Divinity: Original Sin 2` and player engagement of `Disco Elysium`.<br>
+This games were chosen as they are similar in gameplay and content to `Baldur's Gate 3` but did not have any new content, patches or DLCs released around the time of our treatment date.<br>
+There were also no Steam sales that could have influenced the player count of any of the games, as the only Steam sales that occurred around the treatment date were winter sales affecting all games.<br>
 These take-aways allow us to make some key assumptions:<br>
  - Parallel Trends: Both the treated unit and the control groups show similar player engagement before the release of Patch 5, an assumption to be verified or rejected later in this project.<br>
  - SUTVA: The release of Patch 5 for `Baldur's Gate 3` doesn't affect the average daily player count of the control group games.<br>
  - There is no concurrent shock: As verified, there were no DLCs, sales or other external factors that could affect the average player count of the games in the control group.
+ 
+*Data Limitation*:
+Unfortunately, after getting the data from Steam Charts and wrangling it for a while, I came to the conclusion that those two games didn't have representation within the timeframe used in this project, so a new control group had to be found. After some scoping of potential games, `Hogwarts Legacy` was chosen, as it follows the same premises as the two previous games, albeit with different gameplay style. `Hogwarts Legacy` doesn't have any major updates or DLCs released within the treatment window, doesn't have major sales, and is still within the RPG genre, meaning the general audience should be similar, and has data available for the time period we're interested in.
  
 This table summarizes the treatment of this project:
 
@@ -40,7 +47,7 @@ This table summarizes the treatment of this project:
 |Treatment|Patch 5|
 |Treatment Date|November 30th, 2023|
 |Outcome|Average Daily Steam Players|
-|Control Groups|Divinity: Original Sin 2 + Disco Elysium|
+|Control Groups|Hogwarts Legacy|
 |Method|DiD + Event Study|
 
 #### Importing libraries and data
@@ -53,132 +60,128 @@ library(lubridate) # Easy date time operations
 
 # Importing data from JSON files
 bg3 <- fromJSON("data/bg3.json")
-div2 <- fromJSON("data/divinity2.json")
-de <- fromJSON("data/disco_elysium.json")
+hl <- fromJSON("data/hogwarts.json")
 
 # Converting into proper dataframes and adding column names
 bg3_df <- as.data.frame(bg3)
 colnames(bg3_df) <- c("time_ms", "avg_players")
 
-div2_df <- as.data.frame(div2)
-colnames(div2_df) <- c("time_ms", "avg_players")
-
-de_df <- as.data.frame(de)
-colnames(de_df) <- c("time_ms", "avg_players")
+hl_df <- as.data.frame(hl)
+colnames(hl_df) <- c("time_ms", "avg_players")
 
 #Previewing the first 3 lines of each df
 head(bg3_df, 3)
-head(div2, 3)
-head(de, 3)
+head(hl_df, 3)
 ```
 
-Since the dataframes imported from the Steam Charts webpage have the time in milliseconds, it needs to be converted to weekly average so we can proceed with our analysis. Upomn further investigation, I came to the conclusion that Steam Charts provides time series at varying temporal resolutions. To ensure consistent weekly aggregation, the analysis restricts the sample to the post-launch period in which daily observations are available.
+Since the dataframes imported from the Steam Charts webpage have the time in milliseconds, it needs to be converted to monthly average so we can proceed with our analysis. Upon further investigation, I came to the conclusion that Steam Charts provides time series at varying temporal resolutions. To ensure consistent weekly aggregation, the analysis restricts the sample to the time winfow that the treatment revolves around.
 
-```{r Conversion and Combining, warning=FALSE, message = FALSE}
-# Convert time_ms → Date
-bg3_df <- bg3_df %>% 
-  mutate(date = as.Date(as.POSIXct(time_ms / 1000, origin="1970-01-01", tz="UTC")))
-div2_df <- div2_df %>% 
-  mutate(date = as.Date(as.POSIXct(time_ms / 1000, origin="1970-01-01", tz="UTC")))
-de_df <- de_df %>% 
-  mutate(date = as.Date(as.POSIXct(time_ms / 1000, origin="1970-01-01", tz="UTC")))
+```{r Converting and Combining, warning=FALSE, message = FALSE}
+# Converting time_ms to Date and add game column
+bg3_df <- bg3_df %>%
+  mutate(date = as.Date(as.POSIXct(time_ms / 1000, origin = "1970-01-01", tz="UTC")),
+         game = "BG3")
+hl_df <- hl_df %>%
+  mutate(date = as.Date(as.POSIXct(time_ms / 1000, origin = "1970-01-01", tz="UTC")),
+         game = "HL")
 
-# Add game label before merging
-bg3_df$game <- "BG3"
-div2_df$game <- "Div2"
-de_df$game <- "DE"
+# Combine into one dataframe
+games_df <- bind_rows(bg3_df, hl_df)
 
-# Merge all games
-games_df <- bind_rows(bg3_df, div2_df, de_df)
-
-# Filter from when data stops being monthly and begins being daily
-games_df <- games_df %>%
-  filter(date >= as.Date("2023-08-01"))
-
-# Aggregate to weekly averages using floor_date
-games_df_weekly <- games_df %>%
-  group_by(game, week_start = lubridate::floor_date(date, unit = "week", week_start = 1)) %>%
-  summarise(avg_players = mean(avg_players, na.rm = TRUE),
-  .groups = "drop")
+# Filter analysis window
+start_date <- as.Date("2023-10-02")
+end_date   <- as.Date("2024-05-06")
+games_df <- games_df %>% filter(date >= start_date & date <= end_date)
 
 # Confirming games_df_weekly structure and column names
-str(games_df_weekly)
-summary(games_df_weekly)
+str(games_df)
+summary(games_df)
 ```
 
-The dataframe if set up with a column for the game, one for the week and one for the average number of players for that week. we can now limit the timeframe that will be analysed. The analysis window chosen spans from the second of October 2023, shortly after the game's launch through February 4th, providing a sufficient long pre-treatment period to assess parallel trends and a focused post-treatment window to capture the short-run engagement effects of Patch 5 while limiting exposure to additional confounding events.
+The dataframe is set up with a column for the game, one for the date and one for the average number of players for that month. We limited the time from the second of October 2023, shortly after the game's launch through the sixth of May, 2024, providing a sufficient long pre-treatment period to assess parallel trends and a focused post-treatment window to capture the short to medium-run engagement effects of Patch 5.
 
 |Phase|Dates|
 |---|---|
 |Pre-treatment|02/10/2023 -> 29/11/2023|
 |Treatment|30/11/2023|
-|Post-treatment|01/12/2023 -> 04/02/2024|
+|Post-treatment|01/12/2023 -> 06/05/2024|
 
-```{r}
-# Narrowing the weeks to the treatment window
-window_df <- games_df_weekly %>%
-  filter(week_start >= as.Date("2023-10-02") & week_start <= as.Date("2024-02-04"))
+```{r Treatment Window}
+# Monthly Aggregation
+games_df <- games_df %>%
+  mutate(month = floor_date(date, unit = "month")) %>%
+  group_by(game, month) %>%
+  summarize(avg_players = mean(avg_players, na.rm = TRUE), .groups = "drop")
 
-# Observing the range
-range(window_df$week_start)
+# Preview
+head(games_df, 3)
+
+# Define treatment date
+patch_date <- as.Date("2023-11-30")
+
+# Create flags for treatment and post-treatment, create variable for relative months to release month
+games_df <- games_df %>%
+  mutate(
+    treatment = ifelse(game == "BG3", 1, 0),
+    post = ifelse(month >= floor_date(patch_date, "month"), 1, 0),
+    month_relative = round(as.numeric(difftime(month, floor_date(patch_date, "month"), units = "weeks") / 4))  # approx months
+  )
+
+# Check resulting data
+table(games_df$month_relative, games_df$game)
+games_df %>% 
+  filter(!is.na(avg_players))
 ```
 
 Finally the dataframe is ready. Let's proceed with a visual representation of the weekly average players per game.
 
-```{r}
-games_plot <- window_df %>% 
+```{r Plotting Average Player Count}
+# Plotting
+games_plot <- games_df %>% 
   ggplot(
-  aes(x = week_start,
-      y = avg_players, 
+  aes(x = month,
+      y = avg_players,
       color = game
       )) + 
-  geom_line(size = 1.1) +
+  geom_line(linewidth = 1.1) +
   geom_vline(
-    xintercept = as.Date("2023-11-30"),
+    xintercept = patch_date,
     color = "orangered",
     linetype = "dashed") +
+  geom_point(size = 2, na.rm = TRUE) +
   geom_vline(
-    xintercept = c(as.Date("2023-11-10"), as.Date("2023-12-07")),
-    color = "gold",
+    xintercept = as.Date(c("2023-11-10", "2023-12-07", "2024-02-15", "2024-03-20","2024-04-11")),
+    color = "black",
     linetype = "dotdash") +
-  labs(title = "Weekly Player Count", 
-       subtitle = "Patch 5 release indicated by red line\nAwards won indicated by yellow line",
-       x = "Week Start",
-       y = "Player Count") +
-  scale_y_continuous(breaks = seq(0,300000, by = 50000))
+  labs(title = "Weekly Player Count (Interpolated)", 
+       subtitle = "Patch 5 release indicated by red line\nAwards won (confounders) indicated by black line",
+       x = "Week Starting Date",
+       y = "Average Players") +
+       scale_y_continuous(breaks = seq(0,300000, by = 50000))
 games_plot
 ```
 
-The plot produced by our analysis suggests that `Baldur's Gate 3` already had a steeper pre-treatment growth relative to controls, indicating a potential violation of the parallel trends assumption. To address this, I complement the Difference-in-Differences analysis with an event-study specification to examine dynamic treatment effects and pre-trends.
+The plot produced by our analysis suggests that `Baldur's Gate 3` already had a steeper pre-treatment growth relative to controls, but it still follows loosely the parallel assumption, but with higher scale on the slope of the lines. To address this, I complement the Difference-in-Differences analysis with an event-study specification to examine dynamic treatment effects and pre-trends.
 
 
 #### Baseline DiD model
-This baseline Difference-in-Differences model serves as a preliminary estimate and is interpreted cautiously given evidence of divergent pre-treatment trends.
+This baseline Difference-in-Differences model serves as a preliminary estimate.
 
-```{r}
+```{r Difference-in-Differences}
 # Baseline Difference-in-Differences
-window_df <- window_df %>%
-  mutate(
-    treatment = ifelse(game == "BG3", 1, 0),
-    post = ifelse(week_start >= as.Date("2023-11-30"), 1, 0)
-  )
-
-did_baseline <- lm(avg_players ~ treatment * post, data = window_df)
-summary(did_baseline)
+did_model <- lm(avg_players ~ treatment * post, data = games_df)
+summary(did_model)
 ```
 
-The baseline Difference-in-Differences estimate yields a positive but statistically insignificant interaction term between treatment and post-treatment period. This suggests that, once baseline differences are accounted for, there is no strong evidence of a discrete increase in player engagement immediately following Patch 5. Given the visibly steeper pre-treatment trend for `Baldur’s Gate 3`, this result is consistent with concerns regarding the parallel trends assumption and motivates a more flexible event-study approach.
+The regression results show a large and statistically significant difference in average player counts between `Baldur’s Gate 3` and the control title. Because the analysis uses monthly data and includes only a small number of post-treatment observations, the post-treatment and interaction terms cannot be estimated separately, which leads to singularities in the model. As a result, the main evidence for the impact of Patch 5 comes from the visible divergence in trends after the patch, as shown in the graphical analysis.
 
-```{r}
-# Event Study
-patch_date <- as.Date("2023-11-30")
 
-event_df <- window_df %>%
-  mutate(
-    week_relative = as.integer(difftime(week_start, patch_date, units = "weeks")),
-    treatment = ifelse(game == "BG3", 1, 0)
-  )
+## Evaluation
+#### Robustness & Limitations
+Results should be interpreted with caution given the coarse time aggregation and small number of post-treatment observations. While the control title follows a similar directional trend, pre-treatment slopes are not perfectly parallel. In addition, major award wins during the post-treatment period may have contributed to increased visibility for Baldur’s Gate 3, potentially inflating the estimated effect attributed to Patch 5.
 
-table(event_df$week_relative)
-```
-
+## Conclusion and Next Steps
+Overall, the analysis suggests that Patch 5 was associated with an increase in player engagement for `Baldur’s Gate 3` relative to the control title, `Hogwarts Legacy`. While the graphical evidence shows a clear divergence in trends following the patch release, the results should be interpreted with caution. The post-treatment period coincides with external events, such as major award announcements, which may have contributed to higher player counts alongside the patch itself. As a result, although the findings are consistent with a positive treatment effect, part of the observed increase may reflect broader visibility and publicity rather than the patch alone.<br>
+Going forward, it would be interesting to redo this project which access to higher-frequency data, as the data collected only allowed for a monthly analysis, having a weekly analysis might yield different results.<br>
+Expanding the control group would also allow for a different analysis, especially with similar games as the intended `Divinity: Original Sin 2` and `Disco Elysium`, unfortunately data for these two games wasn't available for the period that this project was interested in analysing.<br>
+An extension of this project could also be examining engagement effects on a longer time period.
